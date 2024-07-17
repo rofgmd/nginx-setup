@@ -422,6 +422,16 @@ server {
 #}
 ```
 
+### 查看nginx启动配置
+
+使用`-t`命令进行查看
+
+```bash
+kaihang.weng@C02FRP54MD6M nginx % nginx -t
+nginx: the configuration file /usr/local/etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /usr/local/etc/nginx/nginx.conf test is successful
+```
+
 ### Serving Static Content
 
 An important web server task is serving out files (such as images or static HTML pages). You will implement an example where, depending on the request, files will be served from different local directories: `/data/www` (which may contain HTML files) and `/data/images` (containing images). This will require editing of the configuration file and setting up of a [server](https://nginx.org/en/docs/http/ngx_http_core_module.html#server) block inside the [http](https://nginx.org/en/docs/http/ngx_http_core_module.html#http) block with two [location](https://nginx.org/en/docs/http/ngx_http_core_module.html#location) blocks.
@@ -463,3 +473,45 @@ include /etc/nginx/conf.d/*.conf;
 ```
 
 所以就包含了 `/etc/nginx/conf.d/`下面的所有conf文件
+
+不过Macos配置不太一样，nginx在`/usr/local/etc/nginx/`下面
+
+创建一个`/usr/local/etc/nginx/nginx_costumize.conf`
+
+```nginx
+# practice for nginx conf
+
+worker_processes 2;
+
+events{
+    worker_connections 1024;
+}
+
+http{
+    include mime.types;
+    default_type application/octet-stream;
+
+    sendfile on;
+    keepalive_timeout 65;
+
+    server{
+        listen 80;
+        server_name localhost;
+
+        location / {
+            root /Users/kaihang.weng/nginx-test/www/html;
+            index index.html;
+        }
+
+    }
+}
+```
+
+然后测试一下，用`-t`命令测试
+
+```bash
+kaihang.weng@C02FRP54MD6M html % nginx -t -c /usr/local/etc/nginx/nginx_costumize.conf
+nginx: the configuration file /usr/local/etc/nginx/nginx_costumize.conf syntax is ok
+nginx: configuration file /usr/local/etc/nginx/nginx_costumize.conf test is successful
+```
+
