@@ -518,3 +518,159 @@ nginx: configuration file /usr/local/etc/nginx/nginx_costumize.conf test is succ
 ```
 
 #### 配置HTTPS
+
+HTTPS要有密钥和证书
+
+```bash
+# 生成私钥
+kaihang.weng@C02FRP54MD6M cert % openssl genrsa -out localhost.key 2048
+# 生成签名请求
+kaihang.weng@C02FRP54MD6M cert % openssl req -new -key localhost.key -out localhost.csr
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:CN
+State or Province Name (full name) [Some-State]:Guangdong
+Locality Name (eg, city) []:Shenzhen
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:Shopee
+Organizational Unit Name (eg, section) []:Infra
+Common Name (e.g. server FQDN or YOUR name) []:Kevin
+Email Address []:kevinweng0509@gmail.com
+
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:751225
+An optional company name []:
+# 生成证书
+kaihang.weng@C02FRP54MD6M cert % openssl x509 -req -days 365 -in localhost.csr -signkey localhost.key -out localhost.crt
+Certificate request self-signature ok
+subject=C=CN, ST=Guangdong, L=Shenzhen, O=Shopee, OU=Infra, CN=Kevin, emailAddress=kevinweng0509@gmail.com
+```
+
+更新conf文件
+
+```nginx
+    server{
+        listen 8100 ssl;
+        server_name localhost;
+        ssl_certificate /Users/kaihang.weng/nginx-test/cert/localhost.crt;
+        ssl_certificate_key /Users/kaihang.weng/nginx-test/cert/localhost.key;
+
+        location / {
+            root /Users/kaihang.weng/nginx-test/www/html;
+            index index.html;
+            try_files $uri $uri/ = 404;
+        }
+    }
+```
+
+证书文件本身实际上包含了公钥，因此不需要单独指定公钥。证书文件 .crt 或 .pem 通常包含以下信息：
+
+服务器的公钥
+服务器的信息（如域名）
+颁发证书的 CA 的信息
+证书的有效期
+CA 的数字签名
+当客户端（如浏览器）与服务器建立 SSL/TLS 连接时，以下步骤发生：
+
+- 客户端请求与服务器建立 SSL/TLS 连接。
+- 服务器发送其证书（包含公钥）给客户端。
+- 客户端验证服务器证书（通过 CA 的公钥验证证书的真实性）。
+- 客户端生成一个随机数（称为前主密钥，Pre-master secret），然后用服务器的公钥加密并发送给服务器。
+- 服务器用其私钥解密前主密钥，双方使用这个前主密钥生成对称密钥，用于接下来的加密通信。
+
+然后加载新的配置文件
+
+```bash
+kaihang.weng@C02FRP54MD6M cert % nginx -s reload -c /usr/local/etc/nginx/nginx_costumize.conf
+```
+
+### 配置代理服务器
+
+> 代理服务器（Proxy Server）是一个位于客户端和目标服务器之间的中介服务器。其主要功能是通过代理服务器来转发客户端的请求和服务器的响应。具体来说，代理服务器有以下几种主要作用：
+> - 隐藏客户端身份：代理服务器可以隐藏客户端的IP地址，使得目标服务器只看到代理服务器的IP地址。这可以用于提高客户端的隐私性和安全性。
+> - 缓存：代理服务器可以缓存目标服务器的响应，从而提高访问速度和减少网络流量。当多个客户端请求相同的资源时，代理服务器可以直接从缓存中提供，而不需要每次都向目标服务器请求。
+> - 访问控制：代理服务器可以通过过滤和控制规则来限制客户端对某些资源的访问。例如，企业可以使用代理服务器来限制员工访问某些网站。
+> - 负载均衡：代理服务器可以将客户端的请求分发到多个后端服务器上，以实现负载均衡，提高系统的整体性能和可靠性。
+> - 内容过滤：代理服务器可以检查并过滤通过它传输的数据，以阻止恶意内容或不适当内容进入客户端网络。
+
+设置：
+
+```nginx
+    server{
+        listen 8101;
+        server_name test-nginx.com;
+
+        location /{
+            proxy_pass https://localhost:8100/;
+        }
+    }
+```
+
+然后访问的时候，访问：http://localhost:8101/
+
+代理和反向代理都是网络架构中的重要组件，主要区别在于它们的用途和工作方式：
+
+#### 代理（Proxy）
+
+**用途：**  
+代理服务器主要用于客户端，它在客户端和互联网之间充当中介。
+
+**工作方式：**  
+1. **客户端请求** -> 代理服务器 -> 目标服务器：客户端将请求发送到代理服务器，代理服务器再将请求转发到目标服务器。
+2. **目标服务器响应** -> 代理服务器 -> 客户端：目标服务器将响应发送到代理服务器，代理服务器再将响应返回给客户端。
+
+**用途场景：**  
+- **隐匿客户端IP**：隐藏客户端的真实IP地址，以增强隐私保护。
+- **访问控制**：限制客户端访问某些网站或资源。
+- **缓存**：缓存常访问的内容以减少网络带宽使用和加快访问速度。
+- **内容过滤**：过滤掉不适合的内容，例如广告或恶意软件。
+
+#### 反向代理（Reverse Proxy）
+
+**用途：**  
+反向代理服务器主要用于服务器端，它在互联网和服务器之间充当中介。
+
+**工作方式：**  
+1. **客户端请求** -> 反向代理服务器 -> 后端服务器：客户端将请求发送到反向代理服务器，反向代理服务器再将请求转发到合适的后端服务器。
+2. **后端服务器响应** -> 反向代理服务器 -> 客户端：后端服务器将响应发送到反向代理服务器，反向代理服务器再将响应返回给客户端。
+
+**用途场景：**  
+- **负载均衡**：将请求分配到多个后端服务器，以均衡负载和提高性能。
+- **安全防护**：隐藏后端服务器的IP地址，防止直接攻击后端服务器。
+- **SSL加速**：处理SSL加密和解密，减轻后端服务器的负载。
+- **缓存**：缓存静态内容以加速响应时间和减少后端服务器的负载。
+
+#### 图示
+
+##### 代理
+
+```css
+[客户端] <-> [代理服务器] <-> [目标服务器]
+```
+
+##### 反向代理
+
+```css
+[客户端] <-> [反向代理服务器] <-> [后端服务器1]
+                                     <-> [后端服务器2]
+                                     <-> [后端服务器3]
+```
+
+通过这种方式，代理主要服务于客户端，而反向代理主要服务于服务器端。
+
+## Nginx 错误排查学习
+
+### Nginx 4xx问题
+
+#### 400 Bad Request
+
+#### 401 Unauthorized
+
+#### 403 Forbidden
+
+#### 404 Not Found
