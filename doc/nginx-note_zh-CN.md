@@ -466,6 +466,8 @@ server {
 
 ### 自己配置Nginx静态页面
 
+#### 配置HTTP
+
 首先，在 `/etc/nginx/nginx.conf` 的HTTP模块中，看到这句
 
 ```nginx
@@ -515,3 +517,4 @@ nginx: the configuration file /usr/local/etc/nginx/nginx_costumize.conf syntax i
 nginx: configuration file /usr/local/etc/nginx/nginx_costumize.conf test is successful
 ```
 
+#### 配置HTTPS
